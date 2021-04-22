@@ -11,7 +11,7 @@ function main()
 		args = ["analysis.js"];
 	}
 	var filePath = args[0];
-
+	
 	complexity(filePath);
 
 	// Report
@@ -21,9 +21,26 @@ function main()
 		builder.report();
 	}
 
+	//esprima.parse(program);
+
 }
 
+function counter(node){
+	ifStatement = false;
+	var num = 0;
 
+	traverseWithParents(node, function (node){
+		if (node.type === "IfStatement") ifStatement = true;
+		if (node.type === "LogicalExpression" && (node.operator === "&&" || node.operator === "||"))
+			num++;
+	});
+
+	if (num === 0 && ifStatement){
+		return 1
+	}
+
+	return num;
+}
 
 var builders = {};
 
@@ -90,7 +107,7 @@ function traverseWithParents(object, visitor)
     for (key in object) {
         if (object.hasOwnProperty(key)) {
             child = object[key];
-            if (typeof child === 'object' && child !== null && key != 'parent')
+            if (typeof child === 'object' && child !== null && key != 'parent') 
             {
             	child.parent = object;
 					traverseWithParents(child, visitor);
@@ -99,63 +116,51 @@ function traverseWithParents(object, visitor)
     }
 }
 
-function decisionCounter(node) {
-	var max = 0;
-	ifStatement = false;
-
-	traverseWithParents(node, function (node) {
-		if (node.type === "IfStatement") ifStatement = true;
-		if (node.type === "LogicalExpression" && (node.operator === "&&" || node.operator === "||"))
-			max++;
-	});
-
-	if (max === 0 && ifStatement) {
-		return 1
-	}
-	return max;
-}
-
-function complexity(filePath) {
+function complexity(filePath)
+{
 	var buf = fs.readFileSync(filePath, "utf8");
 	var ast = esprima.parse(buf, options);
-	var stringCount = (JSON.stringify(ast).match(/Literal/g) || []).length;
+
+	var i = 0;
+
+	var strCount = (JSON.stringify(ast).match(/Literal/g) || []).length;
 
 	// A file level-builder:
 	var fileBuilder = new FileBuilder();
 	fileBuilder.FileName = filePath;
 	fileBuilder.ImportCount = 0;
 	builders[filePath] = fileBuilder;
-	fileBuilder.Strings = stringCount;
+
+	fileBuilder.Strings = strCount;
+	exports.getStrings = () => fileBuilder.Strings;
 
 	// Tranverse program with a function visitor.
-	traverseWithParents(ast, function (node) {
+	traverseWithParents(ast, function (node) 
+	{
 		if (node.type === 'FunctionDeclaration') {
+			var num = 0;
 			var builder = new FunctionBuilder();
-
-			//parameter count
-			builder.ParameterCount = node.params.length;
-
-			//simple cyclomatic complexity + max count
-
-			var max = 0;
-
+			builder.ParameterCount = node.params.length
+			
 			traverseWithParents(node, function (node) {
 				if (isDecision(node)) {
 					builder.SimpleCyclomaticComplexity += 1;
 
-					if (decisionCounter(node) > max) {
-						max = decisionCounter(node);
+					if (counter(node) > num) {
+						num = counter(node);
 					}
 				}
 			});
 
-			builder.SimpleCyclomaticComplexity += 1;
 			builder.FunctionName = functionName(node);
-			builder.StartLine = node.loc.start.line;
-			builder.MaxConditions = max;
+			builder.StartLine    = node.loc.start.line;
 			builders[builder.FunctionName] = builder;
+			builder.SimpleCyclomaticComplexity += 1
+			builder.MaxConditions = num;
 		}
+
 	});
+
 }
 
 // Helper function for counting children of node.
@@ -163,17 +168,17 @@ function childrenLength(node)
 {
 	var key, child;
 	var count = 0;
-	for (key in node)
+	for (key in node) 
 	{
-		if (node.hasOwnProperty(key))
+		if (node.hasOwnProperty(key)) 
 		{
 			child = node[key];
-			if (typeof child === 'object' && child !== null && key != 'parent')
+			if (typeof child === 'object' && child !== null && key != 'parent') 
 			{
 				count++;
 			}
 		}
-	}
+	}	
 	return count;
 }
 
@@ -203,7 +208,7 @@ function functionName( node )
 if (!String.prototype.format) {
   String.prototype.format = function() {
     var args = arguments;
-    return this.replace(/{(\d+)}/g, function(match, number) {
+    return this.replace(/{(\d+)}/g, function(match, number) { 
       return typeof args[number] != 'undefined'
         ? args[number]
         : match
@@ -214,7 +219,7 @@ if (!String.prototype.format) {
 
 main();
 
-function Crazy (argument)
+function Crazy (argument) 
 {
 
 	var date_bits = element.value.match(/^(\d{4})\-(\d{1,2})\-(\d{1,2})$/);
@@ -304,4 +309,5 @@ remainder.toString() + " seconds";
 mints.toString().split(".")[0] + " " + szmin;
       }
   }
- exports.complexity = complexity;
+
+exports.complexity = complexity;
